@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>JOGO DE TIRO ULTRA</title>
+<style>
+body{margin:0;background:#060a14;overflow:hidden;font-family:Arial;color:white;touch-action:none}
+canvas{display:block}
+#ui{position:absolute;top:10px;left:10px;background:rgba(0,0,0,0.7);padding:10px;border-radius:12px}
+button{background:#4f46e5;color:white;border:none;padding:8px 10px;border-radius:8px;margin:2px;font-weight:bold}
+#score{margin-top:8px}
+</style>
+</head>
+<body>
+<div id="ui">
+<b>GRAFICOS:</b><br>
+<button onclick="setQ(0)">BAIXA</button>
+<button onclick="setQ(1)">MEDIA</button>
+<button onclick="setQ(2)">ALTA</button>
+<button onclick="setQ(3)">ULTRA</button>
+<div id="score">PONTOS: 0 | VIDA: 3</div>
+</div>
+<canvas id="game"></canvas>
+<script>
+const canvas=document.getElementById('game'),ctx=canvas.getContext('2d');
+let W,H,Q=2;function resize(){W=innerWidth;H=innerHeight;let s=Q==0?0.6:1;canvas.width=W*s;canvas.height=H*s;canvas.style.width=W+'px';canvas.style.height=H+'px';}resize();
+function setQ(q){Q=q;resize();}
+let player={x:200,y:200,r:18},bullets=[],enemies=[],particles=[],score=0,life=3,mouse={x:W/2,y:H/2},keys={};
+window.addEventListener('mousemove',e=>{mouse.x=e.clientX;mouse.y=e.clientY});
+window.addEventListener('touchmove',e=>{mouse.x=e.touches[0].clientX;mouse.y=e.touches[0].clientY;},{passive:false});
+window.onkeydown=e=>keys[e.key.toLowerCase()]=true;window.onkeyup=e=>keys[e.key.toLowerCase()]=false;
+function spawn(){enemies.push({x:Math.random()*W,y:-20,r:14+Math.random()*18,speed:1+Math.random()*2+Q})}setInterval(spawn,700);
+let last=0;function loop(t){
+requestAnimationFrame(loop);ctx.setTransform(canvas.width/W,0,0,canvas.height/H,0,0);
+ctx.fillStyle=Q<2?'#060a14':'rgba(6,10,20,0.35)';ctx.fillRect(0,0,W,H);
+if(keys['a']||keys['arrowleft'])player.x-=5;if(keys['d']||keys['arrowright'])player.x+=5;
+if(keys['w']||keys['arrowup'])player.y-=5;if(keys['s']||keys['arrowdown'])player.y+=5;
+player.x=Math.max(20,Math.min(W-20,player.x));player.y=Math.max(20,Math.min(H-20,player.y));
+let ang=Math.atan2(mouse.y-player.y,mouse.x-player.x);
+if(t-last>180){bullets.push({x:player.x,y:player.y,vx:Math.cos(ang)*10,vy:Math.sin(ang)*10});last=t;}
+ctx.save();ctx.translate(player.x,player.y);ctx.rotate(ang);if(Q>1){ctx.shadowBlur=15;ctx.shadowColor='#4f46e5';}
+ctx.fillStyle='#fff';ctx.fillRect(0,-6,24,12);ctx.fillStyle='#4f46e5';ctx.beginPath();ctx.arc(0,0,player.r,0,Math.PI*2);ctx.fill();ctx.restore();ctx.shadowBlur=0;
+for(let i=bullets.length-1;i>=0;i--){let b=bullets[i];b.x+=b.vx;b.y+=b.vy;ctx.fillStyle='#facc15';ctx.beginPath();ctx.arc(b.x,b.y,Q==0?3:5,0,Math.PI*2);ctx.fill();if(b.x<0||b.x>W||b.y<0||b.y>H)bullets.splice(i,1);}
+for(let i=enemies.length-1;i>=0;i--){let e=enemies[i];e.y+=e.speed;ctx.fillStyle='#ef4444';ctx.beginPath();ctx.arc(e.x,e.y,e.r,0,Math.PI*2);ctx.fill();
+for(let j=bullets.length-1;j>=0;j--){let b=bullets[j];if(Math.hypot(b.x-e.x,b.y-e.y)<e.r+6){bullets.splice(j,1);enemies.splice(i,1);score+=10;if(Q>0)for(let k=0;k<Q*8;k++)particles.push({x:e.x,y:e.y,vx:(Math.random()-0.5)*8,vy:(Math.random()-0.5)*8,life:1});break;}}
+if(enemies[i]&&Math.hypot(enemies[i].x-player.x,enemies[i].y-player.y)<e.r+player.r){enemies.splice(i,1);life--;if(life<=0){alert('GAME OVER! Pontos: '+score);location.reload();}}}
+if(Q>0){for(let p of particles){p.x+=p.vx;p.y+=p.vy;p.life-=0.04;ctx.globalAlpha=p.life;ctx.fillStyle='#a5b4fc';ctx.fillRect(p.x,p.y,3,3);}ctx.globalAlpha=1;particles=particles.filter(p=>p.life>0);}
+document.getElementById('score').innerText='PONTOS: '+score+' | VIDA: '+life;
+}loop();window.onresize=resize;
+</script>
+</body>
+</html>
